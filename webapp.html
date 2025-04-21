@@ -1,0 +1,246 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Par 3 Golf Game</title>
+  <style>
+    body {
+      margin: 0;
+      font-family: Arial, sans-serif;
+      background-image: url('../assets/img/golf4.jpg');
+      background-size: cover;
+      background-position: center;
+      background-repeat: no-repeat;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    nav {
+      width: 100%;
+      background-color: rgba(0, 0, 0, 0.7);
+      display: flex;
+      justify-content: center;
+      padding: 10px 0;
+    }
+
+    nav a {
+      color: white;
+      text-decoration: none;
+      margin: 0 15px;
+      font-size: 18px;
+    }
+
+    nav a:hover {
+      text-decoration: underline;
+    }
+
+    #visual {
+      width: 100%;
+      height: 300px;
+      position: relative;
+      overflow: hidden;
+    }
+
+    #ball {
+      position: absolute;
+      bottom: 10px;
+      left: 50%;
+      width: 20px;
+      height: 20px;
+      background: white;
+      border-radius: 50%;
+      transition: transform 1s ease-out;
+    }
+
+    #game {
+      max-width: 600px;
+      width: 100%;
+      padding: 20px;
+      background: rgba(255, 255, 255, 0.95);
+      box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+      margin-top: 20px;
+      border-radius: 8px;
+      text-align: center;
+    }
+
+    select, button {
+      margin: 10px;
+      padding: 8px 12px;
+      font-size: 16px;
+    }
+
+    #score {
+      margin-top: 20px;
+      font-weight: bold;
+    }
+
+    #message {
+      margin-top: 10px;
+      font-style: italic;
+    }
+
+    #power-meter {
+      width: 80%;
+      height: 20px;
+      background: #ccc;
+      margin: 20px auto;
+      position: relative;
+      border-radius: 10px;
+      overflow: hidden;
+    }
+
+    #power-fill {
+      height: 100%;
+      width: 0;
+      background-color: #27ae60;
+      transition: width 0.05s;
+    }
+  </style>
+</head>
+<body>
+
+  <nav>
+    <a href="golf.html">Par 3 Game</a>
+    <a href="index.html">Resume</a>
+    <a href="scratch.html">Scratch</a>
+  </nav>
+
+  <div id="visual">
+    <div id="ball"></div>
+  </div>
+
+  <div id="game">
+    <h2>Par 3 Hole</h2>
+    <p><strong>Distance to Pin:</strong> <span id="distance"></span> yards</p>
+
+    <div id="club-selection">
+      <label>Select Club:</label>
+      <select id="club">
+        <option value="110">Pitching Wedge (~110 yd)</option>
+        <option value="130">9 Iron (~130 yd)</option>
+        <option value="150">7 Iron (~150 yd)</option>
+        <option value="170">5 Iron (~170 yd)</option>
+      </select>
+    </div>
+
+    <div id="putting" style="display: none;">
+      <p>Use the power meter to putt too!</p>
+    </div>
+
+    <div id="power-meter">
+      <div id="power-fill"></div>
+    </div>
+
+    <button onclick="startPowerSelection()">Start Power</button>
+    <button id="swing-button" onclick="takeShot()" disabled>Shoot!</button>
+
+    <p id="message"></p>
+    <div id="score"></div>
+  </div>
+
+  <script>
+    let totalDistance = Math.floor(Math.random() * 51) + 130;
+    let remainingDistance = totalDistance;
+    let strokes = 0;
+    const par = 3;
+    const greenRadius = 20;
+    let power = 0;
+    let powerInterval;
+    let increasing = true;
+    const ball = document.getElementById('ball');
+
+    function updateDistanceDisplay() {
+      document.getElementById("distance").textContent = `${remainingDistance.toFixed(1)}`;
+    }
+
+    function animateBall() {
+      const travel = 200 + Math.random() * 100;
+      const angle = (Math.random() - 0.5) * 40;
+      ball.style.transform = `translate(${angle}px, -${travel}px)`;
+      setTimeout(() => {
+        ball.style.transform = 'translate(0, 0)';
+      }, 1000);
+    }
+
+    function startPowerSelection() {
+      power = 0;
+      increasing = true;
+      document.getElementById("swing-button").disabled = false;
+      const fill = document.getElementById("power-fill");
+      clearInterval(powerInterval);
+      powerInterval = setInterval(() => {
+        if (increasing) {
+          power += 1;
+          if (power >= 100) increasing = false;
+        } else {
+          power -= 1;
+          if (power <= 0) increasing = true;
+        }
+        fill.style.width = power + "%";
+      }, 20);
+    }
+
+    function takeShot() {
+      clearInterval(powerInterval);
+      document.getElementById("swing-button").disabled = true;
+      strokes++;
+
+      const isPutting = remainingDistance <= greenRadius;
+      animateBall();
+
+      if (isPutting) {
+        const puttStrength = (power / 100) * 30;
+        const diff = Math.abs(puttStrength - remainingDistance);
+
+        if (diff < 2) {
+          document.getElementById("message").textContent = `Putt made! You finished in ${strokes} stroke(s).`;
+          endHole();
+        } else {
+          remainingDistance = diff;
+          document.getElementById("message").textContent = puttStrength > remainingDistance ? "You hit it past the hole!" : "You left it short!";
+        }
+
+      } else {
+        const clubPower = parseFloat(document.getElementById("club").value);
+        const shotDistance = (power / 100) * clubPower + (Math.random() * 10 - 5);
+        remainingDistance = Math.abs(remainingDistance - shotDistance);
+
+        if (remainingDistance <= greenRadius) {
+          document.getElementById("message").textContent = `You're on the green! Time to putt.`;
+          switchToPutting();
+          remainingDistance = Math.random() * 15 + 5;
+        } else {
+          document.getElementById("message").textContent = `You hit it ${shotDistance.toFixed(1)} yards. ${remainingDistance.toFixed(1)} yards to the pin.`;
+        }
+      }
+
+      updateDistanceDisplay();
+      updateScoreDisplay();
+    }
+
+    function switchToPutting() {
+      document.getElementById("club-selection").style.display = "none";
+      document.getElementById("putting").style.display = "block";
+    }
+
+    function updateScoreDisplay() {
+      document.getElementById("score").textContent = `Par: ${par} | Strokes: ${strokes}`;
+    }
+
+    function endHole() {
+      let result = strokes < par ? "Birdie!" : strokes === par ? "Par!" : "Bogey or worse!";
+      document.getElementById("message").textContent += ` ${result} Play again?`;
+
+      const button = document.querySelector("button");
+      button.textContent = "Play Again";
+      button.onclick = () => location.reload();
+      document.getElementById("swing-button").disabled = true;
+    }
+
+    updateDistanceDisplay();
+    updateScoreDisplay();
+  </script>
+</body>
+</html>
